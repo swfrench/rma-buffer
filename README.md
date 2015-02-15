@@ -1,22 +1,35 @@
-# A minimal one-sided buffer based on MPI-3 RMA
+# A one-sided buffer based on MPI-3 RMA
 
 A simple one-sided RMA buffer supporting non-blocking concurrent writes. The
 idea is to use this as a building block in applications that need one-sided
-aggregation of small messages (for example, in implementing an active messaage
+aggregation of small messages (for example, in implementing an active message
 scheme).
 
-## Implementation
+## Design
 
 The whole idea is quite simple: each rank on the selected communicator exposes
 a buffer of fixed length to accommodate incoming messages (also fixed length).
 Any rank can insert a message into the buffer on any other rank, but only the
 owner rank of the buffer can remove messages from it.
 
+The entire abstraction is implemented as a single C++ class.
+
+### Minimal interface: `put` and `get`
+
+Aside from the constructor, the entire interface comprises two user-faceing
+methods:
+
+* `put`: insert a message into the buffer on a specified target rank
+* `get`: copy the contents of the locally exposed buffer and allowing the
+  latter to be overwritten / reused
+
 By default, the message `put` operation is non-blocking: in the event that the
 target buffer is full and cannot accommodate additional messages, the `put`
 simply returns and indicates that it did not complete. A blocking mode is also
 available, but care must be taken to avoid deadlock (namely, to ensure that the
 target rank makes progress in emptying its buffer).
+
+### Implementation
 
 Mutual exclusion is enforced using a pair of counters for each buffer: one for
 reserving an index into the buffer to which a message may be written, and
